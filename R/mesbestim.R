@@ -16,10 +16,11 @@
 #' @param boot If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
 #' @param iters Number of bootstrap iterations.
 #' 
-#' @return Point estimate for SACE and credible interval
+#' @return ATE point and interval estimates.  
 #' 
 #' @export
 
+#ADD CI flexibility
 mesb_estim<-function(df,diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500){
 
 if(crob==F & corcl==T){
