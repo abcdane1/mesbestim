@@ -8,7 +8,7 @@
 #' @param xlabs Vector of covariate labels for measurement error model as characters to be interacted with treatment, usually individual level. Ignored if diffx=F.
 #' @param clabs Vector of covariate labels as characters for measurement error model not to be interacted with treatment, usually at cluster level. Ignored if diffx=F.
 #' @param varprint If varprint=T, returns variance of estimator. 
-#' #' @param crob If crob=T, prints cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
+#' @param crob If crob=T, prints cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
 #' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, prints iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
 #' If boot=F and crob=F, this is the sandwich variance.
 #' @param corcl If corcl=T, prints t-interval version of estimate with nc-7 df. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
