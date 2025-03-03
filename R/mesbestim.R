@@ -1,6 +1,10 @@
-#' Estimation of the ATE with measurement error and selection bias in the internal validation set.
+#' Estimation of the average treatment effect for binary outcome measurement error and selection bias in the internal validation set with clustered-randomized data 
 #'
-#' This function provides estimates of the ATE...
+#' This function estimates the average treatment effect (ATE) for binary outcomes expressed in risk difference when there is
+#' measurement error in the outcome but with an internal validation set that is not randomly selected with cluster-randomized data. The measurement error model for the measured outcome regresses on true outcome values, treatment,
+#' and if user-specified, covariates. If no covariates are specified, the ATE is completely non-parametrically estimated. If covariates are specified, the measurement error model 
+#' is assumed to be logistic regression. Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
+#' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no corrections are provided for asymptotic variance estimates.
 #' 
 #' 
 #' @param df Data frame containing all data required for estimation with user-specified names below.
@@ -21,7 +25,7 @@
 #' @export
 
 #ADD CI flexibility
-mesb_estim<-function(df,diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500){
+mesb_estim<-function(df,diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
 if(crob==F & corcl==T){
   corcl<-F
@@ -160,8 +164,8 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     }
     
     if(corcl==F){
-      lb<-finalest+qnorm(.025)*sqrt(varest)
-      ub<-finalest+qnorm(.975)*sqrt(varest)
+      lb<-finalest+qnorm(alpha/2)*sqrt(varest)
+      ub<-finalest+qnorm(1-alpha/2)*sqrt(varest)
       output<-c(finalest,varest,lb,ub)
       if(crob==T){
       names(output)<-c("Estimator","VarAsymCL","LBCL","UBCL")}
@@ -171,8 +175,8 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     }
     
     if(corcl==T){
-      lb1T<-finalest+qt(.025,df=m-7)*sqrt(varest)
-      ub1T<-finalest+qt(.975,df=m-7)*sqrt(varest)
+      lb1T<-finalest+qt(alpha/2,df=m-7)*sqrt(varest)
+      ub1T<-finalest+qt(1-alpha/2,df=m-7)*sqrt(varest)
       output<-c(finalest,varest,lb1T,ub1T)
       names(output)<-c("Estimator","VarAsymCL","LBCLCorT","UBCLCorT")
     }
