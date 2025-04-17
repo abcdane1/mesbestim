@@ -1,16 +1,17 @@
-#' Estimation of the average treatment effect for binary outcome measurement error and selection bias in the internal validation set with clustered-randomized data 
+#' Estimation of the average treatment effect for binary outcome misclassification and selection bias in the internal validation set with clustered-randomized data 
 #'
 #' This function estimates the average treatment effect (ATE) for binary outcomes expressed in risk difference when there is
-#' measurement error in the outcome but with an internal validation set that is not randomly selected with cluster-randomized data. The measurement error model for the measured outcome regresses on true outcome values, treatment,
-#' and if user-specified, covariates. If no covariates are specified, the ATE is completely non-parametrically estimated. If covariates are specified, the measurement error model 
+#' measurement error in the binary outcome but with an internal validation set that is not randomly selected with cluster-randomized data. The classification model for the measured outcome regresses on true outcome values, treatment,
+#' and if user-specified, covariates. If no covariates are specified, the ATE is completely non-parametrically estimated. If covariates are specified, the classification model 
 #' is assumed to be logistic regression. Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
 #' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no corrections are provided for asymptotic variance estimates.
 #' 
 #' 
 #' @param df Data frame containing all data required for estimation with user-specified names below.
-#' @param diffx If True, fits a measurement error model with covariates.
-#' @param xlabs Vector of covariate labels for measurement error model as characters to be interacted with treatment, usually individual level. Ignored if diffx=F.
-#' @param clabs Vector of covariate labels as characters for measurement error model not to be interacted with treatment, usually at cluster level. Ignored if diffx=F.
+#' @param diffx If True, fits a classification model with covariates.
+#' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F.
+#' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
+#' can be any covariates, it is recommended in small samples that they include observed cluster variables; hence, the naming convention. Ignored if diffx=F.
 #' @param varprint If varprint=T, returns variance of estimator. 
 #' @param crob If crob=T, prints cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
 #' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, prints iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
