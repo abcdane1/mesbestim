@@ -8,6 +8,11 @@
 #' 
 #' 
 #' @param df Data frame containing all data required for estimation with user-specified names below.
+#' @param trt Name of treamtent as character. 
+#' @param ssvar Name of error variable as character. 
+#' @param gsvar Name of gold-standard variable as character.
+#' @param vald Name of validation variable as character.
+#' @param cl Name of cluster id numeric. 
 #' @param diffx If True, fits a classification model with covariates.
 #' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F.
 #' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
@@ -26,8 +31,16 @@
 #' @export
 
 #ADD CI flexibility
-mesb_estim<-function(df,diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
+#ADD variables for all the things 
+mesb_estim<-function(df,trt,ssvar,gsvar,vald,cl,
+                     diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
+colnames(df)[colnames(df) == trt] <- "a"
+colnames(df)[colnames(df) == ssvar] <- "ys"
+colnames(df)[colnames(df) == gsvar] <- "y"
+colnames(df)[colnames(df) == vald] <- "v"
+colnames(df)[colnames(df) == cl] <- "Id"
+  
 if(crob==F & corcl==T){
   corcl<-F
   warning("No correction has been applied to individual sandwich variance.")
