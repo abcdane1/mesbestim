@@ -9,7 +9,7 @@
 #' 
 #' @param df Data frame containing all data required for estimation with user-specified names below.
 #' @param trt Name of treamtent as character. 
-#' @param ssvar Name of error variable as character. 
+#' @param ssvar Name of silver-standard variable as character. 
 #' @param gsvar Name of gold-standard variable as character.
 #' @param vald Name of validation variable as character.
 #' @param cl Name of cluster id numeric. 
