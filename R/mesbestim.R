@@ -8,7 +8,7 @@
 #' 
 #' 
 #' @param df Data frame containing all data required for estimation with user-specified names below.
-#' @param trt Name of treamtent as character. 
+#' @param trt Name of treatment as character. 
 #' @param ssvar Name of silver-standard variable as character. 
 #' @param gsvar Name of gold-standard variable as character.
 #' @param vald Name of validation variable as character.
@@ -217,7 +217,7 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
     if(crob==T){
       idval<-length(unique(dfog$Id))
       clustidv<-sample(1:idval,idval,replace=T)
-      dflist<-vector("list",length(idval))
+      dflist<-vector("list",idval)
       for(j in 1:idval){
         dflist[[j]]<-dfog[dfog$Id==clustidv[j],]
       }
