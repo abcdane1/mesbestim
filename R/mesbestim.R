@@ -32,6 +32,9 @@
 
 #ADD CI flexibility
 #ADD variables for all the things 
+#Write that cluster number 1-m, but need not be sorted 
+#make error if abs>1 and warning percentage of times
+#double check that it works the same for +-
 mesb_estim<-function(df,trt,ssvar,gsvar,vald,cl,
                      diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
@@ -142,11 +145,14 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
         #mi7x<-sum(dfviint$ys*(1-dfviint$a)-u0hat*(1-phat)*(p110hat[clustid]-p100hat[clustid])-(1-phat)*p100hat[clustid])
         #meatmat1<-meatmat1+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
         
-        mi5x<-sum(dfi$a-phat)
+        #mi5x<-sum(dfi$a-phat)
+        mi5x<-dfi$a-phat
         #mi6x<-sum(dfi$ys*dfi$a-u1hat*phat*(p111hat[i]-p101hat[i])-phat*p101hat[i])
         #mi7x<-sum(dfi$ys*(1-dfi$a)-u0hat*(1-phat)*(p110hat[i]-p100hat[i])-(1-phat)*p100hat[i])
-        mi6x<-sum((dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat)
-        mi7x<-sum((dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat)
+        #mi6x<-sum((dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat)
+        mi6x<-(dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat
+        #mi7x<-sum((dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat)
+        mi7x<-(dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat
         meatmat2<-meatmat2+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
       }}
     
@@ -160,14 +166,16 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
                                             (phat^2*(p111hat-p101hat)^2),2,sum)
     
     
-    breadmat1[nparams+2,nparams+1]<-sum((-p101hat*(phat)-(df$a*df$ys-phat*p101hat))/(phat^2*(p111hat-p101hat)))
+    breadmat1[nparams+2,nparams+1]<-sum(-df$a*df$ys/(phat^2*(p111hat-p101hat)))
+      #sum((-p101hat*(phat)-(df$a*df$ys-phat*p101hat))/(phat^2*(p111hat-p101hat)))
     
     breadmat1[nparams+2,nparams+2]<--N
     
     breadmat1[nparams+3,1:nparams]<-apply((df100cov*(1-phat)^2*(-p100hat)*(1-p100hat)*(p110hat-p100hat)-((1-df$a)*df$ys-(1-phat)*p100hat)*(1-phat)*(df110cov*p110hat*(1-p110hat)-df100cov*p100hat*(1-p100hat)))/
                                             ((1-phat)^2*(p110hat-p100hat)^2),2,sum)
     
-    breadmat1[nparams+3,nparams+1]<-sum((p100hat*((1-phat))+((1-df$a)*df$ys-(1-phat)*p100hat))/((1-phat)^2*(p110hat-p100hat)))
+    breadmat1[nparams+3,nparams+1]<-sum(((1-df$a)*df$ys)/((1-phat)^2*(p110hat-p100hat)))
+      #sum((p100hat*((1-phat))+((1-df$a)*df$ys-(1-phat)*p100hat))/((1-phat)^2*(p110hat-p100hat)))
     
     breadmat1[nparams+3,nparams+3]<--N
     
