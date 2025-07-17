@@ -32,51 +32,68 @@
 
 #ADD CI flexibility
 #ADD variables for all the things 
+#Factors must be dummy coded
 #Write that cluster number 1-m, but need not be sorted 
 #make error if abs>1 and warning percentage of times
 #double check that it works the same for +-
 mesb_estim<-function(df,trt,ssvar,gsvar,vald,cl,
                      diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
+#rename variables for simplicity 
 colnames(df)[colnames(df) == trt] <- "a"
 colnames(df)[colnames(df) == ssvar] <- "ys"
 colnames(df)[colnames(df) == gsvar] <- "y"
 colnames(df)[colnames(df) == vald] <- "v"
 colnames(df)[colnames(df) == cl] <- "Id"
-  
+
+#if not cluster robust, no correction
 if(crob==F & corcl==T){
   corcl<-F
   warning("No correction has been applied to individual sandwich variance.")
 }
   
+#SSW estimator function
 mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
   N<-nrow(df)
+  
+  #validation subset
   dfv<-df[which(df$v==1),]
   
+  #regressor matrices for classification probabilities with set a and y
   new111<-data.frame(df[,c(xlabs,clabs)],a=1,y=1)
   new101<-data.frame(df[,c(xlabs,clabs)],a=1,y=0)
   new110<-data.frame(df[,c(xlabs,clabs)],a=0,y=1)
   new100<-data.frame(df[,c(xlabs,clabs)],a=0,y=0)
   
+  #if classification model depends on covariates
   if(diffx==T){
+    #classification model adjusts for outcome, treatment, xlabs, clabs, treatment*xlabs, and treatment*y
     formdiffx<-paste("ys","~",paste("a","y",paste(c(xlabs,clabs),
                                                   collapse="+"),paste(paste("a",c(xlabs,"y"),sep="*"),collapse="+"),sep="+"),sep="")
     formdiffx<-as.formula(formdiffx)
     mefit<-glm(formdiffx,family="binomial",data=dfv)
     
+    #selection design matrix
     dfvcov<-cbind(int=1,dfv[,c("a","y",xlabs,clabs)],dfv$a*dfv[,c(xlabs,"y")])
+    
+    #overall design matrix with set a and y
     df111cov<-cbind(int=1,new111[,c("a","y",xlabs,clabs)],new111[,c(xlabs,"y")])
     df101cov<-cbind(int=1,new101[,c("a","y",xlabs,clabs)],new101[,c(xlabs,"y")])
     df110cov<-cbind(int=1,new110[,c("a","y",xlabs,clabs)],0*new110[,c(xlabs,"y")])
     df100cov<-cbind(int=1,new100[,c("a","y",xlabs,clabs)],0*new100[,c(xlabs,"y")])
   }
   
+  #if classification model does not depend on covariates
   if(diffx==F){
+    #saturated classification model adjusted for outcome, treatment, outcome*treatment
     formsamex<-paste("ys","~",paste("a","y",paste(paste("a","y",sep="*"),collapse="+"),sep="+"),sep="")
     formsamex<-as.formula(formsamex)
     mefit<-glm(formsamex,family="binomial",data=dfv)
     
+    #selection design matrix
     dfvcov<-cbind(int=1,dfv[,c("a","y")],dfv$a*dfv[,"y"])
+    
+    #overall design matrix with set a and y
     df111cov<-cbind(int=1,new111[,c("a","y")],new111[,"y"])
     df101cov<-cbind(int=1,new101[,c("a","y")],new101[,"y"])
     df110cov<-cbind(int=1,new110[,c("a","y")],0*new110[,"y"])
@@ -84,52 +101,68 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     
   }
   
+  #predicted classification probabilities
   p111hat<-predict(mefit,newdata=new111,type="response")
   p101hat<-predict(mefit,newdata=new101,type="response")
   p110hat<-predict(mefit,newdata=new110,type="response")
   p100hat<-predict(mefit,newdata=new100,type="response")
   phat<-mean(df$a)
   
+  #estimated values of mu1 and mu0
   u1hat<-1/N*sum((df$ys*df$a-phat*p101hat)/(phat*(p111hat-p101hat)))
   u0hat<-1/N*sum((df$ys*(1-df$a)-(1-phat)*p100hat)/((1-phat)*(p110hat-p100hat)))
   
+  #SSW estimator 
   finalest<-u1hat-u0hat
   
+  #just point SSW estimator is printed
   if(varprint==F){
     return(c("Estimator"=finalest))
   }else{
     
+    #for asymptotic variance estimation
+    
+    #fitted values
     pmehat<-fitted.values(mefit)
+    
+    #number of parameters 
     nparams<-ncol(dfvcov)
     
     if(crob==T){
     
+    #meat matrix 
     meatmat1<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
+    
+    #bread matrix 
     m<-length(unique(df$Id))
     
+    #unbiased estimating equations 
     for(i in 1:m){
+      #gee on selection subse
       clustid<-which(dfv$Id==i)
       dfviclustcov<-dfvcov[clustid,]
       pmehati<-pmehat[clustid]
       ysi<-dfv[clustid,]$ys
       estfuni<-t(t(dfviclustcov)%*%(ysi-pmehati)) #this is the estimating function by group, the phi_i, summing over j within the group
       
+      #remaining components 
       clustidfull<-which(df$Id==i)
       dfi<-df[clustidfull,]
       
-      
+      #mic for phat
       mi5x<-sum(dfi$a-phat)
-      #mi6x<-sum(dfi$ys*dfi$a-u1hat*phat*(p111hat[clustidfull]-p101hat[clustidfull])-phat*p101hat[clustidfull])
+      
+      #mic for u1hat 
       mi6x<-sum((dfi$ys*dfi$a-phat*p101hat[clustidfull])/(phat*(p111hat[clustidfull]-p101hat[clustidfull]))-u1hat)
-      #mi7x<-sum(dfi$ys*(1-dfi$a)-u0hat*(1-phat)*(p110hat[clustidfull]-p100hat[clustidfull])-(1-phat)*p100hat[clustidfull])
+      
+      #mic for u0hat
       mi7x<-sum((dfi$ys*(1-dfi$a)-(1-phat)*p100hat[clustidfull])/((1-phat)*(p110hat[clustidfull]-p100hat[clustidfull]))-u0hat)
-      # meatmat<-meatmat+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
       meatmat1<-meatmat1+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
       
     }
     }else{
+      #if individual index above by ij
       meatmat2<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
-      #breadmat2<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
       for(i in 1:N){
         dfi<-df[i,]
         if(dfi$v==1){
@@ -138,53 +171,53 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
           dfvicov<-dfvcov[idv,]
           ysi<-dfv[idv,]$ys
           estfuni<-t(t(dfvicov)%*%(ysi-pmehati))}else{
-            estfuni<-rep(0,nparams)}
-        #this is the estimating function by group, the phi_i, summing over j within the group
-        #mi5x<-sum(dfviint$a-phat)
-        #mi6x<-sum(dfviint$ys*dfviint$a-u1hat*phat*(p111hat[clustid]-p101hat[clustid])-phat*p101hat[clustid])
-        #mi7x<-sum(dfviint$ys*(1-dfviint$a)-u0hat*(1-phat)*(p110hat[clustid]-p100hat[clustid])-(1-phat)*p100hat[clustid])
-        #meatmat1<-meatmat1+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
-        
-        #mi5x<-sum(dfi$a-phat)
+            estfuni<-rep(0,nparams)} #this is the estimating function by person, the phi_ij, summing over ij
+
         mi5x<-dfi$a-phat
-        #mi6x<-sum(dfi$ys*dfi$a-u1hat*phat*(p111hat[i]-p101hat[i])-phat*p101hat[i])
-        #mi7x<-sum(dfi$ys*(1-dfi$a)-u0hat*(1-phat)*(p110hat[i]-p100hat[i])-(1-phat)*p100hat[i])
-        #mi6x<-sum((dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat)
         mi6x<-(dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat
-        #mi7x<-sum((dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat)
         mi7x<-(dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat
         meatmat2<-meatmat2+c(estfuni,mi5x,mi6x,mi7x)%*%t(c(estfuni,mi5x,mi6x,mi7x))
       }}
     
+    ##filling components of bread matrix, sum of jacobian matrices
     breadmat1<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
     
+    #theta theta
     breadmat1[1:nparams,1:nparams]<--t(dfvcov*pmehat*(1-pmehat))%*%as.matrix(dfvcov)
     
+    #pi pi
     breadmat1[nparams+1,nparams+1]<--N
     
+    #mu1 theta
     breadmat1[nparams+2,1:nparams]<-apply((df101cov*phat^2*(-p101hat)*(1-p101hat)*(p111hat-p101hat)-(df$a*df$ys-phat*p101hat)*phat*(df111cov*p111hat*(1-p111hat)-df101cov*p101hat*(1-p101hat)))/
                                             (phat^2*(p111hat-p101hat)^2),2,sum)
     
-    
+    #mu1 pi
     breadmat1[nparams+2,nparams+1]<-sum(-df$a*df$ys/(phat^2*(p111hat-p101hat)))
-      #sum((-p101hat*(phat)-(df$a*df$ys-phat*p101hat))/(phat^2*(p111hat-p101hat)))
     
+    #mu1 mu1
     breadmat1[nparams+2,nparams+2]<--N
     
+    #mu0 theta
     breadmat1[nparams+3,1:nparams]<-apply((df100cov*(1-phat)^2*(-p100hat)*(1-p100hat)*(p110hat-p100hat)-((1-df$a)*df$ys-(1-phat)*p100hat)*(1-phat)*(df110cov*p110hat*(1-p110hat)-df100cov*p100hat*(1-p100hat)))/
                                             ((1-phat)^2*(p110hat-p100hat)^2),2,sum)
     
+    #mu0 pi
     breadmat1[nparams+3,nparams+1]<-sum(((1-df$a)*df$ys)/((1-phat)^2*(p110hat-p100hat)))
-      #sum((p100hat*((1-phat))+((1-df$a)*df$ys-(1-phat)*p100hat))/((1-phat)^2*(p110hat-p100hat)))
     
+    #mu0 mu0
     breadmat1[nparams+3,nparams+3]<--N
     
+    #delta method
     if(crob==T){
+    #for cluster robust
     varest<-t(c(rep(0,nparams+1),1,-1))%*%solve(breadmat1)%*%meatmat1%*%solve(t(breadmat1))%*%c(rep(0,nparams+1),1,-1)}
     else{
+    #for individual
     varest<-t(c(rep(0,nparams+1),1,-1))%*%solve(breadmat1)%*%meatmat2%*%solve(t(breadmat1))%*%c(rep(0,nparams+1),1,-1)
     }
     
+    #if no small sample correction
     if(corcl==F){
       lb<-finalest+qnorm(alpha/2)*sqrt(varest)
       ub<-finalest+qnorm(1-alpha/2)*sqrt(varest)
@@ -196,6 +229,7 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
       }
     }
     
+    #if small sample correction
     if(corcl==T){
       lb1T<-finalest+qt(alpha/2,df=m-7)*sqrt(varest)
       ub1T<-finalest+qt(1-alpha/2,df=m-7)*sqrt(varest)
@@ -208,20 +242,31 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
 
 if(varprint==F){
   output<-mesb_estim_sub(df=df,diffx=diffx,xlabs=xlabs,clabs=clabs,varprint=varprint,crob=crob,corcl=corcl)
+  if(abs(output[1])>1){
+    warning("Estimator outside valid bounds of -1 to 1 for ATE.")
+  }
+  
   return(output)
 }
 
 if(varprint==T & boot==F){
   var_output<-mesb_estim_sub(df=df,diffx=diffx,xlabs=xlabs,clabs=clabs,varprint=varprint,crob=crob,corcl=corcl)
+  if(abs(var_output[1])>1){
+    warning("Estimator outside valid bounds of -1 to 1 for ATE.")
+  }
+  
   return(var_output)
 }
 
 
 if(varprint==T & boot==T){
+
 #bootstrap
 boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
   estboot<-rep(0,iters)
+  failboot<-rep(0,iters)
   for(b in 1:iters){
+    #resample with replacement from clusters
     if(crob==T){
       idval<-length(unique(dfog$Id))
       clustidv<-sample(1:idval,idval,replace=T)
@@ -231,6 +276,7 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
       }
       df<-do.call(rbind,dflist)
     }
+    #resamples with replacement from individuals
     if(crob==F){
       rowind<-sample(1:nrow(dfog),nrow(dfog),replace=T)
       df<-dfog[rowind,]
@@ -242,20 +288,23 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
       estboot[b]<-estim_boot
     }else{
       estboot[b]<-NA
+      failboot[b]<-1
     }}
   
-  varboot<-var(estboot,na.rm=T) #for now 
-  bounds<-quantile(estboot,c(.025,.975),na.rm=T)
+  #bootstrap estimate of varianec
+  varboot<-var(estboot,na.rm=T)
+  
+  bounds<-quantile(estboot,c(alpha/2,1-alpha/2),na.rm=T)
   lb<-bounds[1]
   ub<-bounds[2]
-  output<-c(varboot,lb,ub)
+  output<-c(varboot,lb,ub,mean(failboot))
   
   if(crob==T){
-    names(output)<-c("VarBootCl","LBBootCL","UBBootCL")
+    names(output)<-c("VarBootCl","LBBootCL","UBBootCL","Percent Invalid")
   }
   
   if(crob==F){
-    names(output)<-c("VarBootInd","LBBootInd","UBBootInd")
+    names(output)<-c("VarBootInd","LBBootInd","UBBootInd","Percent Invalid")
   }
   
   return(output)}
@@ -263,6 +312,11 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
 finalest<-mesb_estim_sub(df=df,diffx=diffx,xlabs=xlabs,clabs=clabs,varprint=F)
 varvec<-boot_mesb_estim_sub(dfog=df,iters=iters,diffx=diffx,xlabs=xlabs,clabs=clabs,crob=crob)
 output<-c(finalest,varvec)
+if(abs(output[1])>1){
+  warning("Estimator outside valid bounds of -1 to 1 for ATE.")
+}
+
 return(output)
+
 
 }}
