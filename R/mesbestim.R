@@ -4,7 +4,7 @@
 #' together with a non-randomly selected validation subset of gold-standard outcome measures. By default, the function implements inference for cluster-randomized data (as in Isenberg et al. 2025), 
 #' but it can also be specified for the i.i.d. setting. The classification model, fit on the internal validation subset, 
 #' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If covariates are specified, the classification model is assumed to be a logistic GEE with an independence working correlation. 
-#' If no covariates are specified, the ATE is completely non-parametrically estimated (saturated GEE). Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
+#' If no covariates are specified, the ATE is completely non-parametrically estimated (saturated GEE). Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with #clusters-7 df)
 #' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no small sample corrections are included for asymptotic variance estimates.
 #' 
 #' 
