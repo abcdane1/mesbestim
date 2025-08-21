@@ -2,44 +2,76 @@
 % Please edit documentation in R/mesbestim.R
 \name{mesb_estim}
 \alias{mesb_estim}
-\title{Estimation of the ATE with measurement error and selection bias in the internal validation set.}
+\title{Estimation of the average treatment effect with misclassified outcomes and non-random validation subsets using cluster-randomized data}
 \usage{
 mesb_estim(
   df,
-  diffx = F,
+  trt,
+  ssvar,
+  gsvar,
+  vald,
+  cl,
   xlabs = NULL,
   clabs = NULL,
   varprint = T,
   crob = T,
   corcl = T,
   boot = F,
-  iters = 500
+  iters = 500,
+  alpha = 0.05
 )
 }
 \arguments{
-\item{df}{Data frame containing all data required for estimation with user-specified names below.}
+\item{df}{Data frame containing all columns required for estimation.}
 
-\item{diffx}{If True, fits a measurement error model with covariates.}
+\item{trt}{Name of treatment as character (required).}
 
-\item{xlabs}{Vector of covariate labels for measurement error model as characters to be interacted with treatment, usually individual level. Ignored if diffx=F.}
+\item{ssvar}{Name of silver-standard outcome as character (required).}
 
-\item{clabs}{Vector of covariate labels as characters for measurement error model not to be interacted with treatment, usually at cluster level. Ignored if diffx=F.}
+\item{gsvar}{Name of gold-standard outcome as character (required).}
 
-\item{varprint}{If varprint=T, returns variance of estimator.
-#' @param crob If crob=T, prints cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap.
-If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, prints iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap.
-If boot=F and crob=F, this is the sandwich variance.}
+\item{vald}{Name of validation variable as character (required).}
 
-\item{corcl}{If corcl=T, prints t-interval version of estimate with nc-7 df. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
-for clustered data. Post-hoc corrections can be made using available corrections.}
+\item{cl}{Name of cluster id as character (required for clustered data).}
 
-\item{boot}{If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates.}
+\item{xlabs}{Vector of covariate labels as characters for the classification model that are to be interacted with treatment. Categorical variables must be dummy coded. Interactions that are also interacted with treatment must appear as additional columns in your data frame whose names are included in \code{xlabs}.}
 
-\item{iters}{Number of bootstrap iterations.}
+\item{clabs}{Vector of covariate labels as characters for classification model that are not to be interacted with treatment. While these
+can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Categorical variables must be dummy coded.
+Additional interactions not interacted with treatment must appear as additional columns in your data frame whose names are included in \code{clabs}.}
+
+\item{varprint}{If \code{varprint=T}, returns variance of estimator.}
+
+\item{crob}{If \code{crob=T}, returns cluster-based variance estimates. If \code{boot=T} and \code{crob=T}, this is the non-parametric cluster bootstrap.
+If \code{boot=F} and \code{crob=T}, this is the cluster-robust sandwich variance. If \code{crob=F}, returns iid-based variances. If \code{boot=T} and \code{crob=F}, this is the non-parametric bootstrap.
+If \code{boot=F} and \code{crob=F}, this is the sandwich variance.}
+
+\item{corcl}{If \code{corcl=T}, returns t-interval version of estimate with #clusters-7 degrees of freedom. If \code{corcl=F}, prints normal interval. If \code{crob=F}, we set \code{corcl=F} since this is intended as a method
+for clustered data, and post-hoc corrections can be made by the user.}
+
+\item{boot}{If \code{boot=T}, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates.}
+
+\item{iters}{Number of bootstrap iterations. Ignored if \code{boot=F}.}
+
+\item{alpha}{Value strictly between 0 and 1 for significance level (i.e, 1-\code{alpha/2} confidence interval). Critical values and percentile intervals are based on \{\code{alpha}/2, 1-\code{alpha}/2\}.}
 }
 \value{
-Point estimate for SACE and credible interval
+Point and interval estimates for the ATE.
 }
 \description{
-This function provides estimates of the ATE...
+This function estimates the average treatment effect (ATE) for a binary outcome using silver-standard outcome measures, which are available for all individuals but subject to misclassification,
+together with a non-randomly selected validation subset of gold-standard outcome measures. By default, the function implements inference for cluster-randomized data (as in Isenberg et al. 2025),
+but it can also be specified for the i.i.d. setting. The classification model, fit on the internal validation subset,
+regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If covariates are specified, the classification model is assumed to be a logistic GEE with an independence working correlation.
+If no covariates are specified, the ATE is completely non-parametrically estimated (saturated GEE). Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
+or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no small sample corrections are included for asymptotic variance estimates.
+}
+\references{
+\enumerate{
+\item{Isenberg, D., Mitra, N., Marcus, S.C., Beidas, R.S., and Linn, K.A, 2025. Estimating the average treatment effect in cluster-randomized trials with misclassified outcomes and non-random validation subsets. \emph{In Progress}}
+\item{Shu, D., and Yi, G.Y., 2019. Causal inference with measurement error in outcomes: Bias analysis and estimation methods. \emph{Statistical Methods in Medical Research}, 28(7), pp.2049-2068.}
+\item{Shen, J., Isenberg, D., Linn, K.A., and Hubbard, R.A., 2025. Integrating Misclassified EHR Outcomes With Validated Outcomes From a Non‐Probability Sample. \emph{Statistics in Medicine}, 44(15-17), p.e70127.}
+\item{Stefanski L.A. and Boos D.D., 2002. The calculus of M-estimation. \emph{The American Statistician}, 56(1), pp.29–38.}
+\item{Field C.A. and Welsh A.H., 2007. Bootstrapping clustered data. \emph{Journal of the Royal Statistical Society Series B: Statistical Methodology}, 69(3), pp.369–390.}
+}
 }
