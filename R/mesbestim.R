@@ -1,38 +1,48 @@
-#' Estimation of the average treatment effect for binary outcome misclassification and selection bias in the internal validation set with clustered-randomized data 
+#' Estimation of the average treatment effect with misclassified outcomes and non-random validation subsets using cluster-randomized data
 #'
-#' This function estimates the average treatment effect (ATE) for binary outcomes expressed in risk difference when there is
-#' measurement error in the binary outcome but with an internal validation set that is not randomly selected with cluster-randomized data. The classification model for the measured outcome regresses on true outcome values, treatment,
-#' and if user-specified, covariates. If no covariates are specified, the ATE is completely non-parametrically estimated. If covariates are specified, the classification model 
-#' is assumed to be logistic regression. Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
+#' This function estimates the average treatment effect (ATE) for a binary outcome using silver-standard outcome measures, which are available for all individuals but subject to misclassification, 
+#' together with a non-randomly selected validation subset of gold-standard outcome measures. By default, the function implements inference for cluster-randomized data (as in Isenberg et al. 2025), 
+#' but it can also be specified for the i.i.d. setting.The classification model, fit on the internal validation subset, 
+#' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If no covariates are specified, 
+#' the ATE is completely non-parametrically estimated. If covariates are specified, the classification model is assumed to be logistic GEE with an independence working correlation. 
+#' Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
 #' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no corrections are provided for asymptotic variance estimates.
 #' 
 #' 
-#' @param df Data frame containing all data required for estimation with user-specified names below.
-#' @param trt Name of treatment as character. 
-#' @param ssvar Name of silver-standard variable as character. 
-#' @param gsvar Name of gold-standard variable as character.
-#' @param vald Name of validation variable as character.
-#' @param cl Name of cluster id numeric. 
-#' @param diffx If True, fits a classification model with covariates.
-#' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F.
+#' @param df Data frame containing all data required for estimation.
+#' @param trt Name of treatment as character (required). 
+#' @param ssvar Name of silver-standard outcome as character (required). 
+#' @param gsvar Name of gold-standard outcome as character (required).
+#' @param vald Name of validation variable as character (required).
+#' @param cl Name of cluster id as character (required for clustered data). 
+#' @param diffx If True, fits a classification model on validation subset with covariates.
+#' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F. Categorical variables must be dummy coded.
 #' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
-#' can be any covariates, it is recommended in small samples that they include observed cluster variables; hence, the naming convention. Ignored if diffx=F.
+#' can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Ignored if diffx=F. Categorical variables must be dummy coded.
 #' @param varprint If varprint=T, returns variance of estimator. 
-#' @param crob If crob=T, prints cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
-#' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, prints iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
+#' @param crob If crob=T, returns cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
+#' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, returns iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
 #' If boot=F and crob=F, this is the sandwich variance.
-#' @param corcl If corcl=T, prints t-interval version of estimate with nc-7 df. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
+#' @param corcl If corcl=T, returns t-interval version of estimate with nc-7 df. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
 #' for clustered data. Post-hoc corrections can be made using available corrections.
 #' @param boot If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
 #' @param iters Number of bootstrap iterations.
 #' 
-#' @return ATE point and interval estimates.  
+#' @return Point and interval estimates for the ATE.  
+#' 
+#' @references
+#' \enumerate{
+#'    \item{Isenberg, D., Mitra, N., Marcus, S.C., Beidas, R.S., and Linn, K.A, 2025. Estimating the average treatment effect in cluster-randomized trials with misclassified outcomes and non-random validation subsets. \emph{In Progress}}
+#'    \item{Shu, D., and Yi, G.Y., 2019. Causal inference with measurement error in outcomes: Bias analysis and estimation methods. \emph{Statistical Methods in Medical Research}, 28(7), pp.2049-2068.}
+#'    \item{Shen, J., Isenberg, D., Linn, K.A., and Hubbard,R.A., 2025. Integrating Misclassified EHR Outcomes With Validated Outcomes From a Non‐Probability Sample. \emph{Statistics in Medicine}, 44(15-17), p.e70127.}
+#'    \item{Stefanski L.A. and Boos D.D., 2002. The calculus of M-estimation. \emph{The American Statistician}, 56(1) pp.29–38.}
+#'    \item{Field C.A. and Welsh A.H., 2007. Bootstrapping clustered data. \emph{Journal of the Royal Statistical Society Series B: Statistical Methodology}, 69(3) pp.369–390.}
+#' }
 #' 
 #' @export
 
 #ADD CI flexibility
 #ADD variables for all the things 
-#Factors must be dummy coded
 #Write that cluster number 1-m, but need not be sorted 
 #make error if abs>1 and warning percentage of times
 #double check that it works the same for +-
@@ -134,10 +144,12 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     meatmat1<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
     
     #bread matrix 
+    #number of clusters
     m<-length(unique(df$Id))
     
     #unbiased estimating equations 
-    for(i in 1:m){
+    #for(i in 1:m){
+    for(i in unique(df$Id)){
       #gee on selection subse
       clustid<-which(dfv$Id==i)
       dfviclustcov<-dfvcov[clustid,]
@@ -163,7 +175,8 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     }else{
       #if individual index above by ij
       meatmat2<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
-      for(i in 1:N){
+      #for(i in 1:N){
+      for(i in row.names(df)){
         dfi<-df[i,]
         if(dfi$v==1){
           idv<-which(row.names(dfv)==i)
@@ -269,7 +282,8 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
     #resample with replacement from clusters
     if(crob==T){
       idval<-length(unique(dfog$Id))
-      clustidv<-sample(1:idval,idval,replace=T)
+      #clustidv<-sample(1:idval,idval,replace=T)
+      clustidv<-sample(unique(dfog$Id),idval,replace=T)
       dflist<-vector("list",idval)
       for(j in 1:idval){
         dflist[[j]]<-dfog[dfog$Id==clustidv[j],]
@@ -291,7 +305,7 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
       failboot[b]<-1
     }}
   
-  #bootstrap estimate of varianec
+  #bootstrap estimate of variance
   varboot<-var(estboot,na.rm=T)
   
   bounds<-quantile(estboot,c(alpha/2,1-alpha/2),na.rm=T)
