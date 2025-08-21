@@ -15,7 +15,7 @@
 #' @param gsvar Name of gold-standard outcome as character (required).
 #' @param vald Name of validation variable as character (required).
 #' @param cl Name of cluster id as character (required for clustered data). 
-#' @param diffx If True, fits a classification model on validation subset with covariates.
+#' @param diffx If diffx=T, fits a classification model, logistic GEE with independence working correlation, on validation subset with covariates. If diffx=F, classification probabilities estimated non-parametrically (via saturated GEE).
 #' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F. Categorical variables must be dummy coded.
 #' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
 #' can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Ignored if diffx=F. Categorical variables must be dummy coded.
@@ -27,6 +27,7 @@
 #' for clustered data. Post-hoc corrections can be made using available corrections.
 #' @param boot If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
 #' @param iters Number of bootstrap iterations.
+#' @param alpha Significance level. Critical values and percentile intervals are based on \{alpha/2, 1-alpha/2\}.
 #' 
 #' @return Point and interval estimates for the ATE.  
 #' 
@@ -34,14 +35,13 @@
 #' \enumerate{
 #'    \item{Isenberg, D., Mitra, N., Marcus, S.C., Beidas, R.S., and Linn, K.A, 2025. Estimating the average treatment effect in cluster-randomized trials with misclassified outcomes and non-random validation subsets. \emph{In Progress}}
 #'    \item{Shu, D., and Yi, G.Y., 2019. Causal inference with measurement error in outcomes: Bias analysis and estimation methods. \emph{Statistical Methods in Medical Research}, 28(7), pp.2049-2068.}
-#'    \item{Shen, J., Isenberg, D., Linn, K.A., and Hubbard,R.A., 2025. Integrating Misclassified EHR Outcomes With Validated Outcomes From a Non‐Probability Sample. \emph{Statistics in Medicine}, 44(15-17), p.e70127.}
-#'    \item{Stefanski L.A. and Boos D.D., 2002. The calculus of M-estimation. \emph{The American Statistician}, 56(1) pp.29–38.}
-#'    \item{Field C.A. and Welsh A.H., 2007. Bootstrapping clustered data. \emph{Journal of the Royal Statistical Society Series B: Statistical Methodology}, 69(3) pp.369–390.}
+#'    \item{Shen, J., Isenberg, D., Linn, K.A., and Hubbard, R.A., 2025. Integrating Misclassified EHR Outcomes With Validated Outcomes From a Non‐Probability Sample. \emph{Statistics in Medicine}, 44(15-17), p.e70127.}
+#'    \item{Stefanski L.A. and Boos D.D., 2002. The calculus of M-estimation. \emph{The American Statistician}, 56(1), pp.29–38.}
+#'    \item{Field C.A. and Welsh A.H., 2007. Bootstrapping clustered data. \emph{Journal of the Royal Statistical Society Series B: Statistical Methodology}, 69(3), pp.369–390.}
 #' }
 #' 
 #' @export
 
-#ADD CI flexibility
 #ADD variables for all the things 
 #Write that cluster number 1-m, but need not be sorted 
 #make error if abs>1 and warning percentage of times
