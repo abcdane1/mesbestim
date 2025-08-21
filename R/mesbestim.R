@@ -2,30 +2,31 @@
 #'
 #' This function estimates the average treatment effect (ATE) for a binary outcome using silver-standard outcome measures, which are available for all individuals but subject to misclassification, 
 #' together with a non-randomly selected validation subset of gold-standard outcome measures. By default, the function implements inference for cluster-randomized data (as in Isenberg et al. 2025), 
-#' but it can also be specified for the i.i.d. setting.The classification model, fit on the internal validation subset, 
-#' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If covariates are specified, the classification model is assumed to be logistic GEE with an independence working correlation. 
+#' but it can also be specified for the i.i.d. setting. The classification model, fit on the internal validation subset, 
+#' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If covariates are specified, the classification model is assumed to be a logistic GEE with an independence working correlation. 
 #' If no covariates are specified, the ATE is completely non-parametrically estimated (saturated GEE). Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
-#' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no corrections are provided for asymptotic variance estimates.
+#' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no small sample corrections are included for asymptotic variance estimates.
 #' 
 #' 
-#' @param df Data frame containing all data required for estimation.
+#' @param df Data frame containing all columns required for estimation.
 #' @param trt Name of treatment as character (required). 
 #' @param ssvar Name of silver-standard outcome as character (required). 
 #' @param gsvar Name of gold-standard outcome as character (required).
 #' @param vald Name of validation variable as character (required).
 #' @param cl Name of cluster id as character (required for clustered data). 
-#' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F. Categorical variables must be dummy coded.
-#' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
-#' can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Ignored if diffx=F. Categorical variables must be dummy coded.
-#' @param varprint If varprint=T, returns variance of estimator. 
-#' @param crob If crob=T, returns cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
-#' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, returns iid-based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
-#' If boot=F and crob=F, this is the sandwich variance.
-#' @param corcl If corcl=T, returns t-interval version of estimate with #clusters-7 degrees of freedom. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
-#' for clustered data. Post-hoc corrections can be made using available corrections.
-#' @param boot If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
-#' @param iters Number of bootstrap iterations. Ignored if boot=F.
-#' @param alpha Significance level. Critical values and percentile intervals are based on \{alpha/2, 1-alpha/2\}.
+#' @param xlabs Vector of covariate labels as characters for the classification model that are to be interacted with treatment. Categorical variables must be dummy coded. Interactions that are also interacted with treatment must appear as additional columns in your data frame whose names are included in `xlabs`.
+#' @param clabs Vector of covariate labels as characters for classification model that are not to be interacted with treatment. While these
+#' can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Categorical variables must be dummy coded.
+#' Additional interactions not interacted with treatment must appear as additional columns in your data frame whose names are included in `clabs`.
+#' @param varprint If `varprint=T`, returns variance of estimator. 
+#' @param crob If ``crob=T``, returns cluster-based variance estimates. If `boot=T` and `crob=T`, this is the non-parametric cluster bootstrap. 
+#' If `boot=F` and `crob=T`, this is the cluster-robust sandwich variance. If `crob=F`, returns iid-based variances. If `boot=T` and `crob=F`, this is the non-parametric bootstrap. 
+#' If `boot=F` and `crob=F`, this is the sandwich variance.
+#' @param corcl If `corcl=T`, returns t-interval version of estimate with #clusters-7 degrees of freedom. If `corcl=F`, prints normal interval. If `crob=F`, we set `corcl=F` since this is intended as a method
+#' for clustered data, and post-hoc corrections can be made by the user.
+#' @param boot If `boot=T`, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
+#' @param iters Number of bootstrap iterations. Ignored if `boot=F`.
+#' @param alpha Value strictly between 0 and 1 for significance level (i.e, 1-`alpha/2` confidence interval). Critical values and percentile intervals are based on \{`alpha`/2, 1-`alpha`/2\}.
 #' 
 #' @return Point and interval estimates for the ATE.  
 #' 
@@ -40,10 +41,7 @@
 #' 
 #' @export
 
-#ADD variables for all the things 
-#Write that cluster number 1-m, but need not be sorted 
-#make error if abs>1 and warning percentage of times
-#double check that it works the same for +-
+#ATE estimator function 
 mesb_estim<-function(df,trt,ssvar,gsvar,vald,cl,
                      xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
@@ -60,24 +58,25 @@ if(crob==F & corcl==T & boot==F){
   warning("No correction has been applied to individual sandwich variance.")
 }
 
-if (is.null(x) && is.null(y)) {
+
+if (is.null(xlabs) && is.null(clabs)) {
   diffx<-F
 }else{
   diffx<-T
 }
   
 #SSW estimator function
-mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
+mesb_estim_sub<-function(df,diffx=diffx,xlabs,clabs,varprint,crob,corcl){
   N<-nrow(df)
   
   #validation subset
   dfv<-df[which(df$v==1),]
   
   #regressor matrices for classification probabilities with set a and y
-  new111<-data.frame(df[,c(xlabs,clabs)],a=1,y=1)
-  new101<-data.frame(df[,c(xlabs,clabs)],a=1,y=0)
-  new110<-data.frame(df[,c(xlabs,clabs)],a=0,y=1)
-  new100<-data.frame(df[,c(xlabs,clabs)],a=0,y=0)
+  new111<-data.frame(df[,c(xlabs,clabs),drop=F],a=1,y=1)
+  new101<-data.frame(df[,c(xlabs,clabs),drop=F],a=1,y=0)
+  new110<-data.frame(df[,c(xlabs,clabs),drop=F],a=0,y=1)
+  new100<-data.frame(df[,c(xlabs,clabs),drop=F],a=0,y=0)
   
   #if classification model depends on covariates
   if(diffx==T){
@@ -94,11 +93,11 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     df111cov<-cbind(int=1,new111[,c("a","y",xlabs,clabs)],new111[,c(xlabs,"y")])
     df101cov<-cbind(int=1,new101[,c("a","y",xlabs,clabs)],new101[,c(xlabs,"y")])
     df110cov<-cbind(int=1,new110[,c("a","y",xlabs,clabs)],0*new110[,c(xlabs,"y")])
-    df100cov<-cbind(int=1,new100[,c("a","y",xlabs,clabs)],0*new100[,c(xlabs,"y")])
-  }
+    df100cov<-cbind(int=1,new100[,c("a","y",xlabs,clabs)],0*new100[,c(xlabs,"y")])}
   
   #if classification model does not depend on covariates
   if(diffx==F){
+    
     #saturated classification model adjusted for outcome, treatment, outcome*treatment
     formsamex<-paste("ys","~",paste("a","y",paste(paste("a","y",sep="*"),collapse="+"),sep="+"),sep="")
     formsamex<-as.formula(formsamex)
@@ -134,7 +133,7 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     return(c("Estimator"=finalest))
   }else{
     
-    #for asymptotic variance estimation
+    ##for asymptotic variance estimation
     
     #fitted values
     pmehat<-fitted.values(mefit)
@@ -142,6 +141,7 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     #number of parameters 
     nparams<-ncol(dfvcov)
     
+    #cluster robust sandwich variance 
     if(crob==T){
     
     #meat matrix 
@@ -152,9 +152,9 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     m<-length(unique(df$Id))
     
     #unbiased estimating equations 
-    #for(i in 1:m){
     for(i in unique(df$Id)){
-      #gee on selection subse
+      
+      #gee on selection subset
       clustid<-which(dfv$Id==i)
       dfviclustcov<-dfvcov[clustid,]
       pmehati<-pmehat[clustid]
@@ -177,11 +177,12 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
       
     }
     }else{
+      #individual sandwich variance
       #if individual index above by ij
       meatmat2<-matrix(rep(0,(nparams+3)^2),ncol=nparams+3)
-      #for(i in 1:N){
       for(i in row.names(df)){
         dfi<-df[i,]
+        #logistic regression on validation
         if(dfi$v==1){
           idv<-which(row.names(dfv)==i)
           pmehati<-pmehat[idv]
@@ -190,6 +191,7 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
           estfuni<-t(t(dfvicov)%*%(ysi-pmehati))}else{
             estfuni<-rep(0,nparams)} #this is the estimating function by person, the phi_ij, summing over ij
 
+        #remaining components
         mi5x<-dfi$a-phat
         mi6x<-(dfi$ys*dfi$a-phat*p101hat[i])/(phat*(p111hat[i]-p101hat[i]))-u1hat
         mi7x<-(dfi$ys*(1-dfi$a)-(1-phat)*p100hat[i])/((1-phat)*(p110hat[i]-p100hat[i]))-u0hat
@@ -230,7 +232,7 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     #for cluster robust
     varest<-t(c(rep(0,nparams+1),1,-1))%*%solve(breadmat1)%*%meatmat1%*%solve(t(breadmat1))%*%c(rep(0,nparams+1),1,-1)}
     else{
-    #for individual
+    #for individual sand
     varest<-t(c(rep(0,nparams+1),1,-1))%*%solve(breadmat1)%*%meatmat2%*%solve(t(breadmat1))%*%c(rep(0,nparams+1),1,-1)
     }
     
@@ -257,6 +259,8 @@ mesb_estim_sub<-function(df,diffx,xlabs,clabs,varprint,crob,corcl){
     }
     return(output)}
 
+#return outputs
+#warning if ATE does not respect bounds
 if(varprint==F){
   output<-mesb_estim_sub(df=df,diffx=diffx,xlabs=xlabs,clabs=clabs,varprint=varprint,crob=crob,corcl=corcl)
   if(abs(output[1])>1){
@@ -266,6 +270,7 @@ if(varprint==F){
   return(output)
 }
 
+#if asymptotic variance 
 if(varprint==T & boot==F){
   var_output<-mesb_estim_sub(df=df,diffx=diffx,xlabs=xlabs,clabs=clabs,varprint=varprint,crob=crob,corcl=corcl)
   if(abs(var_output[1])>1){
@@ -275,18 +280,17 @@ if(varprint==T & boot==F){
   return(var_output)
 }
 
-
+#if bootstrap methods  
 if(varprint==T & boot==T){
 
-#bootstrap
-boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
+#non-par bootstrap function
+boot_mesb_estim_sub<-function(dfog,iters,diffx=diffx,xlabs,clabs,crob){
   estboot<-rep(0,iters)
   failboot<-rep(0,iters)
   for(b in 1:iters){
     #resample with replacement from clusters
     if(crob==T){
       idval<-length(unique(dfog$Id))
-      #clustidv<-sample(1:idval,idval,replace=T)
       clustidv<-sample(unique(dfog$Id),idval,replace=T)
       dflist<-vector("list",idval)
       for(j in 1:idval){
@@ -312,15 +316,18 @@ boot_mesb_estim_sub<-function(dfog,iters,diffx,xlabs,clabs,crob){
   #bootstrap estimate of variance
   varboot<-var(estboot,na.rm=T)
   
+  #percentile interval
   bounds<-quantile(estboot,c(alpha/2,1-alpha/2),na.rm=T)
   lb<-bounds[1]
   ub<-bounds[2]
   output<-c(varboot,lb,ub,mean(failboot))
   
+  #cluster boot
   if(crob==T){
     names(output)<-c("VarBootCl","LBBootCL","UBBootCL","Percent Invalid")
   }
   
+  #individual boot
   if(crob==F){
     names(output)<-c("VarBootInd","LBBootInd","UBBootInd","Percent Invalid")
   }
@@ -335,6 +342,5 @@ if(abs(output[1])>1){
 }
 
 return(output)
-
 
 }}
