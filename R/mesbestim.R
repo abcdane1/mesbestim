@@ -3,9 +3,8 @@
 #' This function estimates the average treatment effect (ATE) for a binary outcome using silver-standard outcome measures, which are available for all individuals but subject to misclassification, 
 #' together with a non-randomly selected validation subset of gold-standard outcome measures. By default, the function implements inference for cluster-randomized data (as in Isenberg et al. 2025), 
 #' but it can also be specified for the i.i.d. setting.The classification model, fit on the internal validation subset, 
-#' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If no covariates are specified, 
-#' the ATE is completely non-parametrically estimated. If covariates are specified, the classification model is assumed to be logistic GEE with an independence working correlation. 
-#' Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
+#' regresses gold-standard outcomes on silver-standard outcomes, treatment, and if user-specified, covariates. If covariates are specified, the classification model is assumed to be logistic GEE with an independence working correlation. 
+#' If no covariates are specified, the ATE is completely non-parametrically estimated (saturated GEE). Variance options for cluster-randomized data allow for an asymptotic cluster-robust sandwich variance estimate with or without small-sample correction (t-interval, with n-7 df)
 #' or the non-parametric cluster bootstrap. Corresponding options for individually-randomized data are provided as well, but no corrections are provided for asymptotic variance estimates.
 #' 
 #' 
@@ -15,18 +14,17 @@
 #' @param gsvar Name of gold-standard outcome as character (required).
 #' @param vald Name of validation variable as character (required).
 #' @param cl Name of cluster id as character (required for clustered data). 
-#' @param diffx If diffx=T, fits a classification model, logistic GEE with independence working correlation, on validation subset with covariates. If diffx=F, classification probabilities estimated non-parametrically (via saturated GEE).
 #' @param xlabs Vector of covariate labels as characters for classification model to be interacted with treatment. Ignored if diffx=F. Categorical variables must be dummy coded.
 #' @param clabs Vector of covariate labels as characters for classification model not to be interacted with treatment. While these
 #' can be any covariates, it is recommended in very small samples that they should include observed cluster variables; hence, the naming convention. Ignored if diffx=F. Categorical variables must be dummy coded.
 #' @param varprint If varprint=T, returns variance of estimator. 
 #' @param crob If crob=T, returns cluster-based variance estimates. If boot=T and crob=T, this is the non-parametric cluster bootstrap. 
-#' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, returns iid based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
+#' If boot=F and crob=T, this is the cluster robust sandwich variance. If crob=F, returns iid-based variances. If boot=T and crob=F, this is the non-parametric bootstrap. 
 #' If boot=F and crob=F, this is the sandwich variance.
-#' @param corcl If corcl=T, returns t-interval version of estimate with nc-7 df. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
+#' @param corcl If corcl=T, returns t-interval version of estimate with #clusters-7 degrees of freedom. If corcl=F, prints normal interval. If crob=F, we set corcl=F since this is intended as a method
 #' for clustered data. Post-hoc corrections can be made using available corrections.
 #' @param boot If boot=T, returns non-parametric bootstrap variance and percentile intervals. Otherwise, provides asymptotic variance estimates. 
-#' @param iters Number of bootstrap iterations.
+#' @param iters Number of bootstrap iterations. Ignored if boot=F.
 #' @param alpha Significance level. Critical values and percentile intervals are based on \{alpha/2, 1-alpha/2\}.
 #' 
 #' @return Point and interval estimates for the ATE.  
@@ -47,7 +45,7 @@
 #make error if abs>1 and warning percentage of times
 #double check that it works the same for +-
 mesb_estim<-function(df,trt,ssvar,gsvar,vald,cl,
-                     diffx=F,xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
+                     xlabs=NULL,clabs=NULL,varprint=T,crob=T,corcl=T,boot=F,iters=500,alpha=.05){
 
 #rename variables for simplicity 
 colnames(df)[colnames(df) == trt] <- "a"
@@ -57,9 +55,15 @@ colnames(df)[colnames(df) == vald] <- "v"
 colnames(df)[colnames(df) == cl] <- "Id"
 
 #if not cluster robust, no correction
-if(crob==F & corcl==T){
+if(crob==F & corcl==T & boot==F){
   corcl<-F
   warning("No correction has been applied to individual sandwich variance.")
+}
+
+if (is.null(x) && is.null(y)) {
+  diffx<-F
+}else{
+  diffx<-T
 }
   
 #SSW estimator function
