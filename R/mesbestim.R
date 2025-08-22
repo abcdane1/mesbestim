@@ -35,6 +35,7 @@
 #'    \item{Isenberg, D., Mitra, N., Marcus, S.C., Beidas, R.S., and Linn, K.A, 2025. Estimating the average treatment effect in cluster-randomized trials with misclassified outcomes and non-random validation subsets. \emph{In Progress}}
 #'    \item{Shu, D., and Yi, G.Y., 2019. Causal inference with measurement error in outcomes: Bias analysis and estimation methods. \emph{Statistical Methods in Medical Research, 28(7)}, pp.2049-2068.}
 #'    \item{Shen, J., Isenberg, D., Linn, K.A., and Hubbard, R.A., 2025. Integrating Misclassified EHR Outcomes With Validated Outcomes From a Non‐Probability Sample. \emph{Statistics in Medicine, 44(15-17)}, p.e70127.}
+#'    \item{Liang, K.Y. and Zeger, S.L., 1986. Longitudinal data analysis using generalized linear models. \emph{Biometrika, 73(1)}, pp.13-22.}
 #'    \item{Stefanski L.A. and Boos D.D., 2002. The calculus of M-estimation. \emph{The American Statistician, 56(1)}, pp.29–38.}
 #'    \item{Field C.A. and Welsh A.H., 2007. Bootstrapping clustered data. \emph{Journal of the Royal Statistical Society Series B: Statistical Methodology, 69(3)}, pp.369–390.}
 #' }
