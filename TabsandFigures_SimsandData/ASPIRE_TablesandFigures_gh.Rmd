@@ -95,10 +95,10 @@ ggplot(df_f2_long, aes(x = Estimation_Type, y = Value, color=Estimation_Type, fi
   geom_hline(aes(yintercept = trueATE), linetype="dashed",color = "grey30", size = .25)+  
   facet_wrap(~ set, ncol = 2, labeller = as_labeller(sub_plot_names))+
   coord_cartesian(ylim = c(-0.5, 0.75)) +  
-  scale_fill_manual(labels = c("Proposed_Estim" = "Proposed SSW Estimator", 
-                               "SSW Estimator Homogeneous"="Proposed_Estim_Hom",
-                               "IPSW_Estim" = "IPSW Estimator",  
-                               "SSOnly_Estim" = "SSO Estimator")) +  
+  # scale_fill_manual(labels = c("Proposed_Estim" = "Proposed SSW Estimator", 
+  #                              "SSW Estimator Homogeneous"="Proposed_Estim_Hom",
+  #                              "IPSW_Estim" = "IPSW Estimator",  
+  #                              "SSOnly_Estim" = "SSO Estimator")) +  
   theme_minimal() +  
   theme(axis.text.x = element_blank(), 
         legend.position = "bottom",  
