@@ -338,7 +338,7 @@ estimator_aspire_fun_v3<-function(df,xlabs,clabs,varprint=T,diffx=T,cor=T,ind=T,
     #mu0 mu0
     breadmat1[nparams+3,nparams+3]<--N
     
-    #delta methods
+    #variance est
     varest<-t(c(rep(0,nparams+1),1,-1))%*%solve(breadmat1)%*%meatmat1%*%solve(t(breadmat1))%*%c(rep(0,nparams+1),1,-1)
     
     #wald interval
